@@ -10,19 +10,19 @@
  *     AMQP message headers, not in the body.
  */
 
-import amqplib, { type Channel, type Connection } from "amqplib";
+import amqplib from "amqplib";
 import { v4 as uuidv4 } from "uuid";
 import { env } from "../config/env.js";
 
 const EXCHANGE_NAME = "adopti.events";
 
-let connection: Connection | null = null;
-let channel: Channel | null = null;
+let connection: amqplib.ChannelModel | null = null;
+let channel: amqplib.Channel | null = null;
 
 /**
  * Open (or reuse) a connection + channel and declare the exchange.
  */
-async function ensureChannel(): Promise<Channel | null> {
+async function ensureChannel(): Promise<amqplib.Channel | null> {
   if (channel) return channel;
 
   try {
