@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+*.log
+.git
+.gitignore
+firebase-credentials.json
+firebase-config/
+README.md
