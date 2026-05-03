@@ -8,7 +8,6 @@
 
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
-import cors from "@fastify/cors";
 
 import { env } from "./config/env.js";
 import { initFirebase } from "./config/firebase.js";
@@ -37,13 +36,6 @@ async function main(): Promise<void> {
       fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024,
       files: 1,
     },
-  });
-
-  // CORS — allow web + mobile clients
-  await app.register(cors, {
-    origin: true,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   });
 
   // ── Routes ───────────────────────────────────────────

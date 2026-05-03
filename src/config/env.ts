@@ -34,3 +34,20 @@ export const env = {
   THUMBNAIL_WIDTH: parseInt(process.env.THUMBNAIL_WIDTH ?? "300", 10),
   REDIS_CACHE_TTL_DAYS: parseInt(process.env.REDIS_CACHE_TTL_DAYS ?? "30", 10),
 } as const;
+
+// Fail-fast en producción: si Cloudinary no está configurado, el primer
+// upload daría 500 con un error opaco. Mejor cortar el boot con mensaje claro.
+if (env.NODE_ENV === "production") {
+  const missing: string[] = [];
+  if (!env.CLOUDINARY_CLOUD_NAME) missing.push("CLOUDINARY_CLOUD_NAME");
+  if (!env.CLOUDINARY_API_KEY) missing.push("CLOUDINARY_API_KEY");
+  if (!env.CLOUDINARY_API_SECRET) missing.push("CLOUDINARY_API_SECRET");
+  if (!env.GOOGLE_APPLICATION_CREDENTIALS) {
+    missing.push("GOOGLE_APPLICATION_CREDENTIALS");
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `[env] Missing required configuration in production: ${missing.join(", ")}`,
+    );
+  }
+}

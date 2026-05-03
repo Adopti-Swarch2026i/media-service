@@ -11,16 +11,38 @@ import type { FastifyInstance } from "fastify";
 import { authGuard } from "../middleware/auth.js";
 import { MediaService } from "../services/media.service.js";
 import { ImageValidationError } from "../utils/image.js";
+import { getRedis } from "../config/redis.js";
 
 const mediaService = new MediaService();
 
 export async function mediaRoutes(app: FastifyInstance): Promise<void> {
   // ── Health ─────────────────────────────────────────
+  // Liveness simple: el proceso responde HTTP. Útil para el orquestador
+  // (compose) y para diferenciarlo del readiness más estricto.
   app.get("/api/media/health", async (_req, reply) => {
     return reply.send({
       status: "ok",
       service: "media-service",
       timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Readiness: verifica que dependencias críticas (Redis) responden. Útil
+  // antes de exponer el servicio detrás del gateway en producción.
+  app.get("/api/media/ready", async (_req, reply) => {
+    const checks: Record<string, string> = {};
+    let healthy = true;
+    try {
+      const pong = await getRedis().ping();
+      checks.redis = pong === "PONG" ? "ok" : `unexpected:${pong}`;
+      if (pong !== "PONG") healthy = false;
+    } catch (err) {
+      checks.redis = `error:${(err as Error).message}`;
+      healthy = false;
+    }
+    return reply.status(healthy ? 200 : 503).send({
+      status: healthy ? "ready" : "not_ready",
+      checks,
     });
   });
 
@@ -43,15 +65,34 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
         }
         const fileBuffer = Buffer.concat(chunks);
 
+        // Multipart trunca silenciosamente cuando supera el límite. Sin este
+        // chequeo el servicio sube una imagen incompleta.
+        if (data.file.truncated) {
+          return reply.status(413).send({
+            error: "File exceeds the maximum upload size",
+          });
+        }
+
         if (fileBuffer.length === 0) {
           return reply.status(400).send({ error: "Empty file" });
         }
 
-        // Optional petId from form fields
-        const petId =
+        // Optional petId from form fields. events.md §4.4 lo declara
+        // integer|null en el schema del evento; se valida y convierte aquí.
+        const petIdRaw =
           (data.fields as Record<string, any>)?.petId?.value as
             | string
             | undefined;
+        let petId: number | null = null;
+        if (petIdRaw !== undefined && petIdRaw !== "") {
+          const parsed = Number.parseInt(petIdRaw, 10);
+          if (!Number.isInteger(parsed) || parsed < 1) {
+            return reply
+              .status(400)
+              .send({ error: "petId must be a positive integer" });
+          }
+          petId = parsed;
+        }
 
         const result = await mediaService.upload(
           fileBuffer,

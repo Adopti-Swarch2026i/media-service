@@ -98,10 +98,11 @@ export async function processImage(
 ): Promise<ProcessedImage> {
   const hash = createHash("sha256").update(rawBuffer).digest("hex");
 
-  // Strip all metadata, normalise to JPEG for consistent storage
+  // Strip all metadata, normalise to JPEG for consistent storage.
+  // sharp descarta EXIF/ICC por defecto cuando se reencoda el output;
+  // .rotate() aplica antes la orientación EXIF para no perderla visualmente.
   const original = await sharp(rawBuffer)
-    .rotate() // auto-rotate based on EXIF orientation before stripping
-    .withMetadata({ orientation: undefined } as any) // remove EXIF
+    .rotate()
     .jpeg({ quality: 85, mozjpeg: true })
     .toBuffer();
 

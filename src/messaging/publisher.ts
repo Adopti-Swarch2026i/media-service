@@ -82,6 +82,9 @@ export async function publishEvent(
       routingKey,
       Buffer.from(JSON.stringify(payload)),
       {
+        // events.md §2 exige delivery_mode=2 explícito (persistent:true es
+        // equivalente, pero el spec menciona el número del frame AMQP).
+        deliveryMode: 2,
         persistent: true,
         contentType: "application/json",
         contentEncoding: "utf-8",
