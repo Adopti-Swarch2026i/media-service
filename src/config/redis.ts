@@ -27,7 +27,11 @@ export function getRedis(): Redis {
     });
 
     redis.on("error", (err) => {
-      console.error("[Redis] Connection error:", err.message);
+      const sanitized = err.message.replace(
+        /(:\/\/)([^:]+):([^@]+)@/g,
+        "$1$2:***REDACTED***@",
+      );
+      console.error("[Redis] Connection error:", sanitized);
     });
   }
   return redis;

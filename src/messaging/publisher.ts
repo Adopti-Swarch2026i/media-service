@@ -20,6 +20,22 @@ let connection: amqplib.ChannelModel | null = null;
 let channel: amqplib.Channel | null = null;
 
 /**
+ * Remove credentials from a URL string before logging.
+ */
+function sanitizeUrl(input: string): string {
+  if (!input) return input;
+  return input.replace(/(:\/\/)([^:]+):([^@]+)@/g, "$1$2:***REDACTED***@");
+}
+
+/**
+ * Sanitize any error message that might contain URLs with credentials.
+ */
+function sanitizeError(err: Error | string): string {
+  const msg = typeof err === "string" ? err : err.message;
+  return sanitizeUrl(msg);
+}
+
+/**
  * Open (or reuse) a connection + channel and declare the exchange.
  */
 async function ensureChannel(): Promise<amqplib.Channel | null> {
@@ -32,7 +48,7 @@ async function ensureChannel(): Promise<amqplib.Channel | null> {
     await channel.assertExchange(EXCHANGE_NAME, "topic", { durable: true });
 
     connection.on("error", (err) => {
-      console.error("[RabbitMQ] Connection error:", err.message);
+      console.error("[RabbitMQ] Connection error:", sanitizeError(err));
       channel = null;
       connection = null;
     });
@@ -48,7 +64,7 @@ async function ensureChannel(): Promise<amqplib.Channel | null> {
     );
     return channel;
   } catch (err) {
-    console.error("[RabbitMQ] Failed to connect:", (err as Error).message);
+    console.error("[RabbitMQ] Failed to connect:", sanitizeError(err as Error));
     channel = null;
     connection = null;
     return null;
@@ -99,8 +115,8 @@ export async function publishEvent(
     console.log(`[RabbitMQ] Published ${routingKey} (id=${eventId})`);
   } catch (err) {
     console.error(
-      `[RabbitMQ] Failed to publish ${routingKey}:`,
-      (err as Error).message,
+      `[RabbitMQ] Failed to publish ${routingKey}:`
+      , sanitizeError(err as Error),
     );
     channel = null;
     connection = null;
