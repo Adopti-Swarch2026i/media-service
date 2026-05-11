@@ -6,6 +6,7 @@
  * and RabbitMQ connections.
  */
 
+import fs from "node:fs";
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 
@@ -27,6 +28,14 @@ async function main(): Promise<void> {
         env.NODE_ENV !== "production"
           ? { target: "pino-pretty", options: { colorize: true } }
           : undefined,
+    },
+    https: {
+      key: fs.readFileSync(process.env.TLS_KEY_PATH ?? "/app/certs/server.key"),
+      cert: fs.readFileSync(process.env.TLS_CERT_PATH ?? "/app/certs/server.crt"),
+      ca: fs.readFileSync(process.env.TLS_CA_PATH ?? "/app/certs/ca.crt"),
+      requestCert: true,
+      rejectUnauthorized: true,
+      minVersion: "TLSv1.2",
     },
   });
 
