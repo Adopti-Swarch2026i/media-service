@@ -18,7 +18,7 @@ export const env = {
 
   // ── RabbitMQ ────────────────────────────────────────
   RABBITMQ_URL:
-    process.env.RABBITMQ_URL ?? "amqp://adopti:rabbitmq_secret@localhost:5672/",
+    process.env.RABBITMQ_URL ?? "amqps://adopti:__RABBITMQ_PASSWORD__@localhost:5671/",
 
   // ── Cloudinary ──────────────────────────────────────
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ?? "",
@@ -44,6 +44,9 @@ if (env.NODE_ENV === "production") {
   if (!env.CLOUDINARY_API_SECRET) missing.push("CLOUDINARY_API_SECRET");
   if (!env.GOOGLE_APPLICATION_CREDENTIALS) {
     missing.push("GOOGLE_APPLICATION_CREDENTIALS");
+  }
+  if (!env.RABBITMQ_URL || !env.RABBITMQ_URL.startsWith("amqps://")) {
+    missing.push("RABBITMQ_URL must use amqps://");
   }
   if (missing.length > 0) {
     throw new Error(

@@ -21,16 +21,15 @@ FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
+# Install curl for HTTPS healthchecks (BusyBox wget does not support TLS)
+RUN apk add --no-cache curl
+
 # Only production deps
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 # Compiled JS from builder
 COPY --from=builder /app/dist ./dist
-
-# Non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
 
 EXPOSE 8084
 
